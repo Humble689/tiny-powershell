@@ -39,7 +39,7 @@ A custom PowerShell shell implementation that provides a simplified command-line
 The shell prompt can be customized by modifying the `Write-Prompt` function in the script. The current implementation shows:
 - Shell name in green
 - Current directory in yellow
-- Command prompt in whit
+- Command prompt in whit 
 
 ## Error Handling
 
