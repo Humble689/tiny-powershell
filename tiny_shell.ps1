@@ -47,7 +47,7 @@ function Invoke-Command {
                 Clear-Host
             }
             "history" {
-                $script:commandHistory | ForEach-Object { Write-Host $_ }
+                $script:commandHistory | ForEach-Object { Write-Host $_ } # lists command history
             }
             "exit" {
                 exit
