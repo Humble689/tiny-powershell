@@ -18,7 +18,7 @@ function Invoke-Command {
         [string]$command
     )
     
-    # Add command to history
+    # adds command history
     $script:commandHistory += $command
     
     # Split command into parts
