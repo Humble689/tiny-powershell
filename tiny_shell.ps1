@@ -66,7 +66,7 @@ function Invoke-Command {
 # Main shell loop
 Write-Host "Welcome to Tiny Shell!" -ForegroundColor Cyan
 Write-Host "Type 'exit' to quit" -ForegroundColor Cyan
-Write-Host ""
+Write-Host "" # empty line
 
 while ($true) {
     Write-Prompt
