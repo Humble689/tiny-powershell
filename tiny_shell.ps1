@@ -36,6 +36,7 @@ function Invoke-Command {
                 }
                 $script:currentDirectory = Get-Location
             }
+            # lists files in current directory
             "ls" {
                 Get-ChildItem | Format-Table Name, Length, LastWriteTime
             }
