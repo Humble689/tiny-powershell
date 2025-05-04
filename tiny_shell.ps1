@@ -54,6 +54,27 @@ function Invoke-Command {
             "history" {
                 $script:commandHistory | ForEach-Object { Write-Host $_ } # lists command history
             }
+            "mkdir" {
+                if ($args.Count -eq 0) {
+                    Write-Host "Usage: mkdir [directory_name]" -ForegroundColor $script:errorColor
+                    return
+                }
+                New-Item -ItemType Directory -Path $args[0] -Force | Out-Null
+                Write-Host "Created directory: $($args[0])" -ForegroundColor $script:textColor
+            }
+            "touch" {
+                if ($args.Count -eq 0) {
+                    Write-Host "Usage: touch [file_name]" -ForegroundColor $script:errorColor
+                    return
+                }
+                if (-not (Test-Path $args[0])) {
+                    New-Item -ItemType File -Path $args[0] -Force | Out-Null
+                    Write-Host "Created file: $($args[0])" -ForegroundColor $script:textColor
+                } else {
+                    (Get-Item $args[0]).LastWriteTime = Get-Date
+                    Write-Host "Updated timestamp for: $($args[0])" -ForegroundColor $script:textColor
+                }
+            }
             "color" {
                 if ($args.Count -lt 2) {
                     Write-Host "Usage: color [prompt|path|text|error|welcome] [color]" -ForegroundColor $script:errorColor
@@ -93,6 +114,8 @@ function Invoke-Command {
 Write-Host "Welcome to Tiny Shell!" -ForegroundColor $script:welcomeColor
 Write-Host "Type 'exit' to quit" -ForegroundColor $script:welcomeColor
 Write-Host "Type 'color [element] [color]' to change colors" -ForegroundColor $script:welcomeColor
+Write-Host "Type 'mkdir [name]' to create directory" -ForegroundColor $script:welcomeColor
+Write-Host "Type 'touch [name]' to create file" -ForegroundColor $script:welcomeColor
 Write-Host "" # empty line
 
 while ($true) {
