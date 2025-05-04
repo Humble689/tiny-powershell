@@ -9,6 +9,14 @@ $script:textColor = "White"
 $script:errorColor = "Red"
 $script:welcomeColor = "Cyan"
 
+# Initialize aliases
+$script:aliases = @{
+    "ll" = "ls -l"
+    "la" = "ls -a"
+    ".." = "cd .."
+    "..." = "cd ../.."
+}
+
 function Write-Prompt {
     $host.UI.RawUI.ForegroundColor = $script:promptColor
     Write-Host "tiny-shell" -NoNewline
@@ -22,6 +30,23 @@ function Invoke-Command {
     param (
         [string]$command
     )
+    
+    # Check for history command with ! prefix
+    if ($command -match '^!(\d+)$') {
+        $index = [int]$Matches[1]
+        if ($index -ge 0 -and $index -lt $script:commandHistory.Count) {
+            $command = $script:commandHistory[$index]
+            Write-Host "Executing: $command" -ForegroundColor $script:textColor
+        } else {
+            Write-Host "History index out of range" -ForegroundColor $script:errorColor
+            return
+        }
+    }
+    
+    # Check for aliases
+    if ($script:aliases.ContainsKey($command)) {
+        $command = $script:aliases[$command]
+    }
     
     # adds command history
     $script:commandHistory += $command
@@ -41,9 +66,14 @@ function Invoke-Command {
                 }
                 $script:currentDirectory = Get-Location
             }
-            # lists files in current directory
             "ls" {
-                Get-ChildItem | Format-Table Name, Length, LastWriteTime
+                if ($args -contains "-l") {
+                    Get-ChildItem | Format-Table Mode, Length, LastWriteTime, Name
+                } elseif ($args -contains "-a") {
+                    Get-ChildItem -Force | Format-Table Name, Length, LastWriteTime
+                } else {
+                    Get-ChildItem | Format-Table Name, Length, LastWriteTime
+                }
             }
             "pwd" {
                 Write-Host $pwd.Path
@@ -52,7 +82,9 @@ function Invoke-Command {
                 Clear-Host
             }
             "history" {
-                $script:commandHistory | ForEach-Object { Write-Host $_ } # lists command history
+                for ($i = 0; $i -lt $script:commandHistory.Count; $i++) {
+                    Write-Host "$i : $($script:commandHistory[$i])"
+                }
             }
             "mkdir" {
                 if ($args.Count -eq 0) {
@@ -75,6 +107,61 @@ function Invoke-Command {
                     Write-Host "Updated timestamp for: $($args[0])" -ForegroundColor $script:textColor
                 }
             }
+            "rm" {
+                if ($args.Count -eq 0) {
+                    Write-Host "Usage: rm [file_or_directory]" -ForegroundColor $script:errorColor
+                    return
+                }
+                Remove-Item -Path $args[0] -Recurse -Force
+                Write-Host "Removed: $($args[0])" -ForegroundColor $script:textColor
+            }
+            "mv" {
+                if ($args.Count -lt 2) {
+                    Write-Host "Usage: mv [source] [destination]" -ForegroundColor $script:errorColor
+                    return
+                }
+                Move-Item -Path $args[0] -Destination $args[1] -Force
+                Write-Host "Moved $($args[0]) to $($args[1])" -ForegroundColor $script:textColor
+            }
+            "cp" {
+                if ($args.Count -lt 2) {
+                    Write-Host "Usage: cp [source] [destination]" -ForegroundColor $script:errorColor
+                    return
+                }
+                Copy-Item -Path $args[0] -Destination $args[1] -Force
+                Write-Host "Copied $($args[0]) to $($args[1])" -ForegroundColor $script:textColor
+            }
+            "cat" {
+                if ($args.Count -eq 0) {
+                    Write-Host "Usage: cat [file_name]" -ForegroundColor $script:errorColor
+                    return
+                }
+                Get-Content -Path $args[0]
+            }
+            "echo" {
+                if ($args.Count -lt 2) {
+                    Write-Host "Usage: echo [text] > [file_name]" -ForegroundColor $script:errorColor
+                    return
+                }
+                $text = $args[0..($args.Count-2)] -join " "
+                $file = $args[-1]
+                Set-Content -Path $file -Value $text
+                Write-Host "Wrote to file: $file" -ForegroundColor $script:textColor
+            }
+            "date" {
+                Get-Date
+            }
+            "whoami" {
+                Write-Host $env:USERNAME
+            }
+            "sysinfo" {
+                Write-Host "System Information:" -ForegroundColor $script:textColor
+                Write-Host "OS: $((Get-CimInstance Win32_OperatingSystem).Caption)"
+                Write-Host "Version: $((Get-CimInstance Win32_OperatingSystem).Version)"
+                Write-Host "Architecture: $((Get-CimInstance Win32_OperatingSystem).OSArchitecture)"
+                Write-Host "Computer Name: $env:COMPUTERNAME"
+                Write-Host "User: $env:USERNAME"
+            }
             "color" {
                 if ($args.Count -lt 2) {
                     Write-Host "Usage: color [prompt|path|text|error|welcome] [color]" -ForegroundColor $script:errorColor
@@ -96,6 +183,33 @@ function Invoke-Command {
                     }
                 }
             }
+            "help" {
+                Write-Host "Available Commands:" -ForegroundColor $script:textColor
+                Write-Host "cd [path] - Change directory"
+                Write-Host "ls [-l|-a] - List files (use -l for details, -a for hidden files)"
+                Write-Host "pwd - Show current directory"
+                Write-Host "clear - Clear screen"
+                Write-Host "history - Show command history"
+                Write-Host "mkdir [name] - Create directory"
+                Write-Host "touch [name] - Create file"
+                Write-Host "rm [name] - Remove file/directory"
+                Write-Host "mv [source] [dest] - Move/rename file"
+                Write-Host "cp [source] [dest] - Copy file"
+                Write-Host "cat [file] - View file contents"
+                Write-Host "echo [text] > [file] - Write to file"
+                Write-Host "date - Show current date/time"
+                Write-Host "whoami - Show current user"
+                Write-Host "sysinfo - Show system information"
+                Write-Host "color [element] [color] - Change colors"
+                Write-Host "help - Show this help message"
+                Write-Host "exit - Exit shell"
+                Write-Host ""
+                Write-Host "Aliases:" -ForegroundColor $script:textColor
+                Write-Host "ll - ls -l (detailed listing)"
+                Write-Host "la - ls -a (show hidden files)"
+                Write-Host ".. - cd .. (parent directory)"
+                Write-Host "... - cd ../.. (grandparent directory)"
+            }
             "exit" {
                 exit
             }
@@ -112,10 +226,8 @@ function Invoke-Command {
 
 # Main shell loop
 Write-Host "Welcome to Tiny Shell!" -ForegroundColor $script:welcomeColor
+Write-Host "Type 'help' for available commands" -ForegroundColor $script:welcomeColor
 Write-Host "Type 'exit' to quit" -ForegroundColor $script:welcomeColor
-Write-Host "Type 'color [element] [color]' to change colors" -ForegroundColor $script:welcomeColor
-Write-Host "Type 'mkdir [name]' to create directory" -ForegroundColor $script:welcomeColor
-Write-Host "Type 'touch [name]' to create file" -ForegroundColor $script:welcomeColor
 Write-Host "" # empty line
 
 while ($true) {
